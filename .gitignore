@@ -1,0 +1,31 @@
+# Secrets
+.env
+
+# Datasets (too large for GitHub)
+datasets/raw_original/
+datasets/raw_deepfakes/
+datasets/frames_real/
+datasets/frames_fake/
+datasets/cropped_real/
+datasets/cropped_fake/
+datasets/train/
+datasets/validation/
+datasets/test/
+
+# Model checkpoints
+saved_models/*.pth
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+datasets/extra_real_140k/
+datasets/extra_fake_140k/
+datasets/*.zip
