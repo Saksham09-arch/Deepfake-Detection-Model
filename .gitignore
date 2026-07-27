@@ -29,3 +29,6 @@ Thumbs.db
 datasets/extra_real_140k/
 datasets/extra_fake_140k/
 datasets/*.zip
+
+datasets/asvspoof_extracted/
+datasets/spectrograms_asvspoof/
