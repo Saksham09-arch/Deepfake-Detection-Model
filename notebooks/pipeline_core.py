@@ -364,3 +364,23 @@ class DeepfakeDetectionPipeline:
             result["top_regions"] = self._gradcam_regions(tensor)
             result["explanation"] = self.explainer.generate(result)
         return result
+
+# --- entry point: standalone audio file ---
+    def analyze_audio(self, audio_path: str, explain: bool = True) -> dict:
+        if self.audio_model is None:
+            return {"error": "Audio model not loaded. Check ASVSPOOF checkpoint path."}
+
+        from audio_deepfake_module import predict_audio
+        audio_result = predict_audio(self.audio_model, self.audio_device, audio_path)
+
+        result = {
+            "prediction": "real" if audio_result["prediction"] == "bonafide" else "fake",
+            "confidence": audio_result.get("confidence", 0.0),
+            "audio_prediction": audio_result["prediction"],
+        }
+        if "probabilities" in audio_result:
+            result["probabilities"] = audio_result["probabilities"]
+
+        if explain and self.explainer:
+            result["explanation"] = self.explainer.generate(result)
+        return result
