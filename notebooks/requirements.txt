@@ -1,0 +1,20 @@
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+
+
+opencv-python-headless
+
+librosa
+soundfile
+matplotlib
+numpy
+Pillow
+
+
+moviepy
+
+gradio
+huggingface_hub
+python-dotenv
