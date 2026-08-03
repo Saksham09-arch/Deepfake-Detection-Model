@@ -1,390 +1,143 @@
-\# 🎭 AI-Powered Deepfake Detection System
+# 🎭 AI-Powered Deepfake Detection System
 
+An end-to-end, multi-modal deepfake detection system — detects manipulated faces in images, videos, live webcam feeds, and AI-synthesized voice audio, with Grad-CAM visual explanations and GenAI-generated natural-language reasoning for each prediction.
 
+**🔴 Live demo:** [deepfake-detection-model-t8be.onrender.com](https://deepfake-detection-model-t8be.onrender.com)
 
-An end-to-end deepfake detection system built with Generative AI and Computer Vision — detects manipulated faces in images, videos, and live webcam feeds, with AI-generated natural-language explanations for each prediction.
+Built entirely using **Anaconda + Jupyter Notebook**, trained on **FaceForensics++**, **ASVspoof 2019**, and the **140k Real and Fake Faces** dataset. Powered by **EfficientNet-B0**, deployed on **Render** with models hosted on **Hugging Face Hub**.
 
+---
 
+## 🚀 Features
 
-Built entirely using \*\*Anaconda Prompt + Jupyter Notebook\*\*, trained on \*\*FaceForensics++\*\*, powered by \*\*EfficientNet-B0\*\* transfer learning and a free-tier LLM for explainability.
+- **Image detection** — upload a face image, get a Real/Fake verdict with confidence, Grad-CAM heatmap region, and a plain-language explanation
+- **Video detection** — samples frames across a video, averages predictions, cross-checks with majority vote, and optionally checks the audio track too
+- **Live webcam detection** — real-time face detection and classification
+- **Voice deepfake detection** — detects AI-cloned/synthesized speech, trained on ASVspoof 2019 (89% accuracy on synthesis systems never seen during training)
+- **Face-swap detection** — a 3-class model distinguishing real / other-manipulation / face-swap specifically
+- **GenAI explanations** — natural-language reasoning grounded in real signals (confidence margin, Grad-CAM region, frame agreement), not just a prediction label
+- **Cloud deployment** — live on Render, with model checkpoints pulled from Hugging Face Hub at startup (keeping the repo and deploy image small)
 
+---
 
+## 🧠 Models & Accuracy
 
-\---
-
-
-
-\## 🚀 Features
-
-
-
-\- \*\*Image detection\*\* — upload any face image, get a Real/Fake verdict with confidence score
-
-\- \*\*Video detection\*\* — samples frames across a video and aggregates predictions for a final verdict
-
-\- \*\*Live webcam detection\*\* — real-time face detection and classification via OpenCV, plus a Gradio-based webcam snapshot mode
-
-\- \*\*GenAI explanations\*\* — natural-language reasoning for each prediction, generated via a free LLM (Hugging Face Inference Providers)
-
-\- \*\*Interactive Gradio UI\*\* — tabbed interface for image, video, and webcam input
-
-\- \*\*Generalization fine-tuning\*\* — improved real-world robustness by fine-tuning on diverse everyday-style face images, not just benchmark footage
-
-
-
-\---
-
-
-
-\## 🧠 Model \& Approach
-
-
-
-| Component | Choice | Why |
-
+| Model | Task | Result |
 |---|---|---|
+| `efficientnet_best.pth` | Real vs Fake (image, FF++ only) | 98% test accuracy, 0.9987 ROC AUC |
+| `efficientnet_finetuned.pth` | Real vs Fake (generalization-fixed) | 98% test accuracy; fixed a real-world webcam misclassification bug (67.95% wrong → 100% correct) |
+| `efficientnet_faceswap_best.pth` | Real / other-fake / face-swap (3-class) | Trained via gradient accumulation + early stopping (see `07_faceswap_training.ipynb`) |
+| `asvspoof_efficientnet_best.pth` | Voice: bonafide vs spoof | 89% accuracy on ASVspoof eval set — synthesis systems unseen during training |
 
-| Architecture | EfficientNet-B0 (transfer learning) | Best accuracy-per-effort tradeoff for a single-GPU beginner-to-intermediate setup |
+**Note on the voice model:** an earlier attempt trained on the Fake-or-Real dataset achieved 100% validation accuracy but collapsed to ~50% (random chance) on genuinely unseen data — traced to two independent data-leakage artifacts in that dataset (inconsistent audio encoding and loudness normalization between real/fake source files). Switching to ASVspoof 2019, a rigorously-designed academic benchmark, fixed this. See the full manual for the complete diagnosis.
 
-| Framework | PyTorch (CUDA 12.4) | Strong deepfake-detection research ecosystem, intuitive debugging |
+---
 
-| Face detection | OpenCV Haar Cascade | Fast, dependency-free, built into OpenCV |
-
-| Explainability | Free LLM (DeepSeek-V3 via Hugging Face) | Natural-language reasoning layer on top of raw predictions |
-
-
-
-\### Results
-
-
-
-| Metric | Score |
-
-|---|---|
-
-| Test Accuracy | 98% |
-
-| Precision / Recall / F1 (both classes) | 0.98 |
-
-| ROC AUC | 0.9987 |
-
-
-
-\*\*Generalization fine-tuning:\*\* the original model, trained only on FaceForensics++ footage, misclassified real-world webcam photos (67.95% "fake" on a genuinely real face) — a textbook domain-shift/generalization gap. Fine-tuning on a small sample of the \*\*140k Real and Fake Faces\*\* dataset (everyday-style photos) fixed this (now 100% correct on the same test) \*\*without\*\* losing accuracy on the original FaceForensics++ test set (still 98%).
-
-
-
-\---
-
-
-
-\## 📁 Project Structure
-
-
+## 📁 Project Structure
 
 ```
-
 Deepfake-Detection/
-
-├── datasets/
-
-│   ├── train/real, train/fake
-
-│   ├── validation/real, validation/fake
-
-│   └── test/real, test/fake
-
-│   (raw videos, extracted frames, and cropped-face intermediates are git-ignored — see Dataset Setup below)
-
 ├── notebooks/
-
-│   ├── 00\_environment\_setup.ipynb
-
-│   ├── 01\_dataset\_download.ipynb
-
-│   ├── 02\_preprocessing.ipynb
-
-│   ├── 03\_model\_training.ipynb
-
-│   ├── 04\_inference.ipynb
-
-│   ├── 05\_video\_inference.ipynb
-
-│   ├── 06\_gradio\_app.ipynb
-
-│   └── 07\_generalization\_improvement.ipynb
-
-├── saved\_models/          (trained weights — git-ignored, see below)
-
-├── outputs/
-
-├── reports/                (evaluation plots, etc.)
-
-├── .env                    (secrets — git-ignored, you create this)
-
+│   ├── 00_environment_setup.ipynb
+│   ├── 01_dataset_download.ipynb
+│   ├── 02_preprocessing.ipynb
+│   ├── 03_model_training.ipynb
+│   ├── 04_inference.ipynb
+│   ├── 05_video_inference.ipynb
+│   ├── 06_generalization_improvement.ipynb
+│   ├── 07_faceswap_training.ipynb
+│   ├── 08_voice_detection.ipynb
+│   ├── 09_faceswap_saksham.ipynb
+│   ├── 09_gradio_app.ipynb
+│   ├── 10_master_pipeline.ipynb
+│   ├── app.py                  ← Render deployment entrypoint
+│   ├── config.py               ← auto-resolves project paths
+│   ├── pipeline_core.py        ← shared detection pipeline class
+│   ├── model_registry.py       ← pulls checkpoints from Hugging Face Hub
+│   └── requirements.txt        ← CPU-only deps for deployment
+├── saved_models/                (git-ignored — pulled from HF Hub or regenerated)
+├── datasets/                    (git-ignored — regenerate via notebooks)
+├── .env                         (git-ignored — secrets)
 ├── .gitignore
-
+├── requirements.txt
 └── README.md
-
 ```
 
+---
 
+## 🛠️ Local Setup
 
-\---
-
-
-
-\## 🛠️ Environment Setup (from scratch)
-
-
-
-\### 1. Install Anaconda
-
-Download and install from \[anaconda.com](https://www.anaconda.com/). Open \*\*Anaconda Prompt\*\* afterward.
-
-
-
-\### 2. Create the project folder (on your chosen drive)
-
+### 1. Install Anaconda, then:
 ```bash
-
-D:
-
-mkdir Deepfake-Detection
-
-cd Deepfake-Detection
-
+conda create -n deepfake_env python=3.11
+conda activate deepfake_env
+conda install -n deepfake_env jupyter notebook -y
+python -m ipykernel install --user --name deepfake_env --display-name "Python (deepfake_env)"
 ```
 
-
-
-\### 3. Create and activate the conda environment
-
+### 2. Install dependencies
 ```bash
-
-conda create -n deepfake\_env python=3.11
-
-conda activate deepfake\_env
-
-```
-
-
-
-\### 4. Install Jupyter and register the kernel
-
-```bash
-
-conda install -n deepfake\_env jupyter notebook -y
-
-pip install ipykernel
-
-python -m ipykernel install --user --name deepfake\_env --display-name "Python (deepfake\_env)"
-
-```
-
-
-
-\### 5. Install core libraries
-
-```bash
-
-pip install numpy pandas opencv-python==4.10.0.84 matplotlib seaborn tqdm
-
-```
-
-
-
-\### 6. Install PyTorch (GPU-enabled, adjust CUDA version to your driver via `nvidia-smi`)
-
-```bash
-
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-
-```
-
-
-
-\### 7. Install remaining libraries
-
-```bash
-
-pip install transformers huggingface\_hub albumentations gradio streamlit Pillow moviepy scikit-learn python-dotenv kaggle
-
+pip install numpy pandas opencv-python==4.10.0.84 matplotlib seaborn tqdm scikit-learn
+pip install transformers huggingface_hub gradio Pillow moviepy python-dotenv kaggle librosa soundfile
 conda install -c conda-forge ffmpeg -y
-
 ```
 
+### 3. Set up secrets
+Create `.env` in the project root:
+```
+HF_TOKEN=your_huggingface_token_here
+```
+Kaggle credentials go in `~/.kaggle/kaggle.json` (from kaggle.com → Settings → API).
 
-
-\### 8. Verify GPU is detected
-
-```python
-
-import torch
-
-print(torch.cuda.is\_available())  # should print True
-
+### 4. Get the datasets and models
+- **Datasets** aren't included in this repo (too large) — run notebooks `01`, `02`, `06`, `07`, `08` in order to regenerate them, or ask a maintainer for a shared link.
+- **Trained models** are hosted on Hugging Face Hub and pulled automatically:
+```bash
+cd notebooks
+python model_registry.py
 ```
 
-
-
-\---
-
-
-
-\## 🔑 Secrets Setup
-
-
-
-Create a `.env` file in the project root (never committed — see `.gitignore`):
-
+### 5. Run the app locally
+```bash
+python app.py
 ```
+Or open `10_master_pipeline.ipynb` / `09_gradio_app.ipynb` in Jupyter for the notebook version.
 
-HF\_TOKEN=your\_huggingface\_token\_here
+---
 
-```
+## ☁️ Deployment
 
-Get a free token at huggingface.co → Settings → Access Tokens.
+The live app runs on [Render](https://render.com), using `notebooks/app.py` as the entrypoint. On startup it:
+1. Pulls whatever model checkpoints are available from a Hugging Face Hub model repo (via `model_registry.py`)
+2. Degrades gracefully if a checkpoint is missing (e.g. runs without the face-swap or audio branch rather than crashing)
+3. Binds Gradio to `0.0.0.0` and Render's dynamic `$PORT`
 
+To deploy your own instance: fork this repo, create a Render web service pointing at `notebooks/app.py` with `notebooks/requirements.txt`, and set an `HF_TOKEN` environment variable in Render's dashboard.
 
+---
 
-Kaggle credentials go in `C:\\Users\\<you>\\.kaggle\\kaggle.json` (downloaded from kaggle.com → Settings → API → Create Legacy API Key) — this lives outside the project folder and is never part of the repo.
+## 🤝 Contributing
 
+1. Fork this repository
+2. Create a feature branch (`git checkout -b your-feature`)
+3. Commit and push to your fork
+4. Open a Pull Request against `main` — it'll be reviewed before merging
 
+---
 
-\---
+## ⚠️ Known Limitations
 
+- Trained primarily on FaceForensics++ and ASVspoof 2019 — broader cross-dataset generalization (Celeb-DF, DFDC, other voice benchmarks) is future work
+- Face detection uses Haar Cascade (fast, but less robust than deep-learning detectors on extreme angles)
+- GenAI explanations are grounded in real signals (confidence margin, Grad-CAM region) but are not themselves a certified forensic tool
 
+## 🔮 Future Work
 
-\## 📦 Dataset Setup
+- Reconcile the two face-swap notebooks into one
+- Broader cross-dataset generalization testing
+- Expand voice detection beyond ASVspoof
 
+---
 
-
-Dataset used: \*\*FaceForensics++ (c23)\*\*, mirrored on Kaggle (`xdxd003/ff-c23`), plus a supplementary sample from \*\*140k Real and Fake Faces\*\* (`xhlulu/140k-real-and-fake-faces`) for generalization fine-tuning.
-
-
-
-Run `notebooks/01\_dataset\_download.ipynb` to download a sample of real + Deepfakes videos via the Kaggle API. Then run `02\_preprocessing.ipynb` to:
-
-1\. Extract 5 evenly-spaced frames per video
-
-2\. Face-crop each frame (OpenCV Haar Cascade, falling back to full frame if no face detected — zero frames lost)
-
-3\. Split into train/validation/test (70/15/15)
-
-
-
-Raw videos, extracted frames, and intermediate crops are \*\*not\*\* included in this repo (too large, regenerable) — see `.gitignore`. Re-run notebooks 01–02 to reproduce them locally.
-
-
-
-\---
-
-
-
-\## 🏋️ Training
-
-
-
-Run `notebooks/03\_model\_training.ipynb`:
-
-\- Loads EfficientNet-B0 with ImageNet pretrained weights, replaces the final layer for binary classification
-
-\- Trains with Adam optimizer, saves the best checkpoint by validation accuracy (not just the final epoch, to avoid keeping an overfit model)
-
-\- Best checkpoint saved to `saved\_models/efficientnet\_best.pth` (git-ignored — retrain locally, or contact the repo owner for the weights file)
-
-
-
-\### Generalization fine-tuning
-
-Run `notebooks/07\_generalization\_improvement.ipynb` to fine-tune the trained model on a mixed dataset (original FF++ frames + everyday-style real/fake images), producing `saved\_models/efficientnet\_finetuned.pth` — the recommended model for real-world (non-benchmark) input like webcam photos.
-
-
-
-\---
-
-
-
-\## 📊 Evaluation
-
-
-
-Also in `03\_model\_training.ipynb` / re-run against `07`'s fine-tuned checkpoint: classification report, confusion matrix, and ROC curve, saved to `reports/evaluation\_plots.png`.
-
-
-
-\---
-
-
-
-\## 🔍 Inference
-
-
-
-\- \*\*Image:\*\* `04\_inference.ipynb` — single-image prediction with confidence + GenAI explanation
-
-\- \*\*Video:\*\* `05\_video\_inference.ipynb` — samples frames, averages predictions, majority-vote cross-check
-
-\- \*\*Live webcam (OpenCV window):\*\* also in `05\_video\_inference.ipynb` — real-time bounding box + label overlay
-
-
-
-\---
-
-
-
-\## 🖥️ Gradio Web App
-
-
-
-Run `notebooks/06\_gradio\_app.ipynb` to launch the full interactive demo (Image / Video / Webcam tabs, GenAI explanations included). Opens at `http://127.0.0.1:7860`.
-
-
-
-\---
-
-
-
-\## 🤝 Contributing
-
-
-
-This project is open to contributions via the standard fork-and-PR workflow:
-
-1\. Fork this repository
-
-2\. Create a feature branch (`git checkout -b your-feature`)
-
-3\. Commit your changes and push to your fork
-
-4\. Open a Pull Request against `main` — it'll be reviewed before merging
-
-
-
-\---
-
-
-
-\## ⚠️ Known Limitations
-
-
-
-\- Trained primarily on FaceForensics++ (Deepfakes manipulation method) — cross-manipulation and cross-dataset generalization is an active area of improvement (see `07\_generalization\_improvement.ipynb`)
-
-\- Face detection uses Haar Cascade (fast, but less accurate than deep-learning face detectors on extreme angles/occlusion)
-
-\- GenAI explanations describe confidence levels in natural language but are not grounded in pixel-level model interpretability (that would require Grad-CAM or similar, planned as a future addition)
-
-
-
-\## 🔮 Future Work
-
-\- Grad-CAM heatmap visualization
-
-\- Face-swap and voice deepfake detection
-
-\- Cross-dataset generalization testing (Celeb-DF, DFDC)
-
-\- Cloud deployment (Google Cloud Run)
-
+*Built with PyTorch, EfficientNet-B0, OpenCV, librosa, Gradio, Hugging Face, and Render.*
