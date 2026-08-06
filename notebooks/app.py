@@ -20,13 +20,16 @@ import cv2
 import numpy as np
 from dotenv import load_dotenv
 
-load_dotenv()  
+load_dotenv()  # HF_TOKEN, HF_MODEL_REPO, etc. -- set these as Render environment variables in production, not a committed .env
+
 from config import SAVED_MODELS_DIR, OUTPUTS_DIR
 from model_registry import ensure_models
 from pipeline_core import DeepfakeDetectionPipeline, BINARY_CLASS_NAMES, FACESWAP_CLASS_NAMES
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
+# --- Fetch whatever checkpoints are available; missing ones are
+# skipped (logged), not fatal. ---
 downloaded = ensure_models(hf_token=HF_TOKEN)
 
 USE_FACESWAP_MODEL = "efficientnet_faceswap_best.pth" in downloaded
@@ -169,4 +172,5 @@ with gr.Blocks(title="AI-Powered Deepfake Detection System") as demo:
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
+    demo.queue()
     demo.launch(server_name="0.0.0.0", server_port=port)

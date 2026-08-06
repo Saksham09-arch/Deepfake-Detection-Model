@@ -4,7 +4,7 @@ torch
 torchvision
 
 
-opencv-python-headless=4.10.0.084
+opencv-python-headless==4.10.0.084
 
 librosa
 soundfile

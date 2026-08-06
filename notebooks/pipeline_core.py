@@ -185,7 +185,7 @@ class ExplanationClient:
 
     def __init__(self, hf_token: str = None, model: str = "deepseek-ai/DeepSeek-V3-0324"):
         from huggingface_hub import InferenceClient
-        self.client = InferenceClient(api_key=hf_token, provider="auto")
+        self.client = InferenceClient(api_key=hf_token, provider="auto", timeout=15)
         self.model = model
 
     def generate(self, signals: dict) -> str:
