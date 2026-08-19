@@ -181,25 +181,45 @@ prediction, not certainty."""
 
 
 class ExplanationClient:
-    """Thin wrapper matching your existing HF InferenceClient usage."""
+    """Thin wrapper matching your existing HF InferenceClient usage.
+
+    Uses a hard-enforced thread timeout instead of relying on the
+    InferenceClient's own `timeout` kwarg -- that kwarg does not
+    reliably bound `.chat.completions.create()` (the OpenAI-compatible
+    surface), which was causing requests to hang indefinitely on
+    Render regardless of the timeout value passed to the constructor.
+    A ThreadPoolExecutor + future.result(timeout=...) force-returns
+    control to the caller after the deadline no matter what the
+    underlying HTTP client is doing in the background.
+    """
 
     def __init__(self, hf_token: str = None, model: str = "deepseek-ai/DeepSeek-V3-0324"):
         from huggingface_hub import InferenceClient
-        self.client = InferenceClient(api_key=hf_token, provider="auto", timeout=15)
+        self.client = InferenceClient(api_key=hf_token, provider="auto")
         self.model = model
 
-    def generate(self, signals: dict) -> str:
+    def generate(self, signals: dict, timeout: int = 12) -> str:
+        import concurrent.futures
         prompt = build_grounded_prompt(signals)
-        try:
+
+        def _call():
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=180,
             )
             return response.choices[0].message.content
-        except Exception as e:
-            print("EXPLANATION ERROR:", type(e).__name__, str(e))
-            return self._fallback(signals)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_call)
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                print(f"EXPLANATION TIMEOUT after {timeout}s -- falling back to template")
+                return self._fallback(signals)
+            except Exception as e:
+                print("EXPLANATION ERROR:", type(e).__name__, str(e))
+                return self._fallback(signals)
 
     @staticmethod
     def _fallback(signals: dict) -> str:
