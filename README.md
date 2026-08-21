@@ -2,9 +2,9 @@
 
 An end-to-end, multi-modal deepfake detection system — detects manipulated faces in images, videos, live webcam feeds, and AI-synthesized voice audio, with Grad-CAM visual explanations and GenAI-generated natural-language reasoning for each prediction.
 
-**🔴 Live demo:** [deepfake-detection-model-t8be.onrender.com](https://deepfake-detection-model-t8be.onrender.com)
+**🖥️ Status:** Currently running locally. Not deployed live yet — cloud deployment (Render) is planned for the future.
 
-Built entirely using **Anaconda + Jupyter Notebook**, trained on **FaceForensics++**, **ASVspoof 2019**, and the **140k Real and Fake Faces** dataset. Powered by **EfficientNet-B0**, deployed on **Render** with models hosted on **Hugging Face Hub**.
+Built entirely using **Anaconda + Jupyter Notebook**, trained on **FaceForensics++**, **ASVspoof 2019**, and the **140k Real and Fake Faces** dataset. Powered by **EfficientNet-B0**, with models hosted on **Hugging Face Hub**.
 
 ---
 
@@ -13,10 +13,10 @@ Built entirely using **Anaconda + Jupyter Notebook**, trained on **FaceForensics
 - **Image detection** — upload a face image, get a Real/Fake verdict with confidence, Grad-CAM heatmap region, and a plain-language explanation
 - **Video detection** — samples frames across a video, averages predictions, cross-checks with majority vote, and optionally checks the audio track too
 - **Live webcam detection** — real-time face detection and classification
-- **Voice deepfake detection** — detects AI-cloned/synthesized speech, trained on ASVspoof 2019 (89% accuracy on synthesis systems never seen during training)
+- **Voice deepfake detection** — detects AI-cloned/synthesized speech, trained on ASVspoof 2019 (89% accuracy on synthesis systems never seen during training). ⚠️ **Note:** audio detection output is currently unpredictable/inconsistent in real-world testing — the voice model is still being refined, treat its predictions as experimental for now
 - **Face-swap detection** — a 3-class model distinguishing real / other-manipulation / face-swap specifically
 - **GenAI explanations** — natural-language reasoning grounded in real signals (confidence margin, Grad-CAM region, frame agreement), not just a prediction label
-- **Cloud deployment** — live on Render, with model checkpoints pulled from Hugging Face Hub at startup (keeping the repo and deploy image small)
+- **Local-first** — currently runs locally via Jupyter/Gradio; model checkpoints are pulled from Hugging Face Hub at startup (keeping the repo small), with cloud deployment planned for later
 
 ---
 
@@ -27,9 +27,9 @@ Built entirely using **Anaconda + Jupyter Notebook**, trained on **FaceForensics
 | `efficientnet_best.pth` | Real vs Fake (image, FF++ only) | 98% test accuracy, 0.9987 ROC AUC |
 | `efficientnet_finetuned.pth` | Real vs Fake (generalization-fixed) | 98% test accuracy; fixed a real-world webcam misclassification bug (67.95% wrong → 100% correct) |
 | `efficientnet_faceswap_best.pth` | Real / other-fake / face-swap (3-class) | Trained via gradient accumulation + early stopping (see `07_faceswap_training.ipynb`) |
-| `asvspoof_efficientnet_best.pth` | Voice: bonafide vs spoof | 89% accuracy on ASVspoof eval set — synthesis systems unseen during training |
+| `asvspoof_efficientnet_best.pth` | Voice: bonafide vs spoof | 89% accuracy on ASVspoof eval set — synthesis systems unseen during training. ⚠️ Real-world output accuracy is currently unpredictable and needs further refinement (see Known Limitations) |
 
-**Note on the voice model:** an earlier attempt trained on the Fake-or-Real dataset achieved 100% validation accuracy but collapsed to ~50% (random chance) on genuinely unseen data — traced to two independent data-leakage artifacts in that dataset (inconsistent audio encoding and loudness normalization between real/fake source files). Switching to ASVspoof 2019, a rigorously-designed academic benchmark, fixed this. See the full manual for the complete diagnosis.
+**Note on the voice model:** an earlier attempt trained on the Fake-or-Real dataset achieved 100% validation accuracy but collapsed to ~50% (random chance) on genuinely unseen data — traced to two independent data-leakage artifacts in that dataset (inconsistent audio encoding and loudness normalization between real/fake source files). Switching to ASVspoof 2019, a rigorously-designed academic benchmark, fixed the leakage issue. However, output on real-world/unseen audio samples is still inconsistent at the moment — further refinement of the audio model is planned. See the full manual for the complete diagnosis.
 
 ---
 
@@ -50,7 +50,7 @@ Deepfake-Detection/
 │   ├── 09_faceswap_saksham.ipynb
 │   ├── 09_gradio_app.ipynb
 │   ├── 10_master_pipeline.ipynb
-│   ├── app.py                  ← Render deployment entrypoint
+│   ├── app.py                  ← app entrypoint (local run; also used for future deployment)
 │   ├── config.py               ← auto-resolves project paths
 │   ├── pipeline_core.py        ← shared detection pipeline class
 │   ├── model_registry.py       ← pulls checkpoints from Hugging Face Hub
@@ -104,16 +104,18 @@ python app.py
 ```
 Or open `10_master_pipeline.ipynb` / `09_gradio_app.ipynb` in Jupyter for the notebook version.
 
+This launches a local Gradio interface — the project currently runs on localhost only.
+
 ---
 
-## ☁️ Deployment
+## ☁️ Deployment (Planned)
 
-The live app runs on [Render](https://render.com), using `notebooks/app.py` as the entrypoint. On startup it:
-1. Pulls whatever model checkpoints are available from a Hugging Face Hub model repo (via `model_registry.py`)
-2. Degrades gracefully if a checkpoint is missing (e.g. runs without the face-swap or audio branch rather than crashing)
-3. Binds Gradio to `0.0.0.0` and Render's dynamic `$PORT`
+The project is not deployed live at the moment — it currently runs locally via `notebooks/app.py`. Cloud deployment (e.g. on Render) is planned for a future release. When deployed, the app will:
+1. Pull whatever model checkpoints are available from a Hugging Face Hub model repo (via `model_registry.py`)
+2. Degrade gracefully if a checkpoint is missing (e.g. run without the face-swap or audio branch rather than crashing)
+3. Bind Gradio to `0.0.0.0` and the host platform's dynamic `$PORT`
 
-To deploy your own instance: fork this repo, create a Render web service pointing at `notebooks/app.py` with `notebooks/requirements.txt`, and set an `HF_TOKEN` environment variable in Render's dashboard.
+To deploy your own instance once ready: fork this repo, create a web service (e.g. on Render) pointing at `notebooks/app.py` with `notebooks/requirements.txt`, and set an `HF_TOKEN` environment variable in the platform's dashboard.
 
 ---
 
@@ -130,10 +132,14 @@ To deploy your own instance: fork this repo, create a Render web service pointin
 
 - Trained primarily on FaceForensics++ and ASVspoof 2019 — broader cross-dataset generalization (Celeb-DF, DFDC, other voice benchmarks) is future work
 - Face detection uses Haar Cascade (fast, but less robust than deep-learning detectors on extreme angles)
+- **Audio/voice detection output is currently unpredictable** — while the model scores 89% on the ASVspoof eval set, real-world predictions on arbitrary audio samples are inconsistent at the moment; further refinement of the voice model is planned
 - GenAI explanations are grounded in real signals (confidence margin, Grad-CAM region) but are not themselves a certified forensic tool
+- Project currently runs locally only — no live deployment yet
 
 ## 🔮 Future Work
 
+- Deploy the project to the cloud (e.g. Render) for public access
+- Refine and improve the audio/voice deepfake model for more consistent, reliable predictions
 - Reconcile the two face-swap notebooks into one
 - Broader cross-dataset generalization testing
 - Expand voice detection beyond ASVspoof
